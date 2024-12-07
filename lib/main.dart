@@ -169,7 +169,7 @@ class SignInPage extends StatelessWidget {
   }
 
   Future<void> _signIn(BuildContext context, String email, String password) async {
-    final url = Uri.parse('https://profenx-backend.onrender.com/api/users/signup');
+    final url = Uri.parse('https://profenx-backend.onrender.com/api/users/login');
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -219,43 +219,109 @@ class SignUpPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: const Text("Sign Up"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: [
-            const Text(
-              "Create Account",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFFFFFFF), Color(0xFF00C6FF)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-            const SizedBox(height: 20),
-            _buildTextField(labelText: "Name", icon: Icons.person, controller: _nameController),
-            const SizedBox(height: 10),
-            _buildTextField(labelText: "Email", icon: Icons.email, controller: _emailController),
-            const SizedBox(height: 10),
-            _buildTextField(labelText: "OTP", icon: Icons.numbers, controller: _otpController),
-            const SizedBox(height: 10),
-            _buildTextField(labelText: "Password", icon: Icons.lock, obscureText: true, controller: _passwordController),
-            const SizedBox(height: 20),
-            _buildElevatedButton(
-              label: "Sign Up",
-              onPressed: () async {
-                SharedPreferences prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('isSignedUp', true);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => SignInPage()),
-                );
-              },
+          ),
+          child: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    // Logo at the top
+                    Container(
+                      width: 100,
+                      height: 100,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      child: Image.asset(
+                        'android/assets/images/logo.png', // Update with your logo path
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const Text(
+                      "Sign Up",
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.blue),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildTextField(labelText: "Email", icon: Icons.email, controller: _emailController),
+                    const SizedBox(height: 10),
+                    _buildTextField(labelText: "Password", icon: Icons.lock, obscureText: true, controller: _passwordController),
+                    const SizedBox(height: 20),
+                    _buildElevatedButton(
+                      label: "Sign Up",
+                      onPressed: () {
+                        final email = _emailController.text;
+                        final password = _passwordController.text;
+                        _signUp(context, email, password);
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => SignInPage()),
+                        );
+                      },
+                      child: const Text(
+                        "Already have an account? Sign In",
+                        style: TextStyle(color: Colors.black26),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _signUp(BuildContext context, String email, String password) async {
+    final url = Uri.parse('https://profenx-backend.onrender.com/api/users/signup');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'username': email, 'password': password}),
+    );
+
+    if (response.statusCode == 200) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isSignedUp', true);
+      await prefs.setString('username', email);
+      await prefs.setString('backend_url', 'https://profenx-backend.onrender.com/api');
+      print("sign-up passed");
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+      );
+    } else {
+      // Handle error
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Sign-up Failed'),
+          content: Text('Failed to create account. Please try again.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }
 
@@ -315,25 +381,7 @@ class _HomePageState extends State<HomePage> {
   String monthlyExpense = '';
   String dailyExpense = '';
   bool showInputs = false;
-  bool showNextButton = false;
-
-  Map<String, bool> selectedCategories = {
-    'Food': false,
-    'Travel': false,
-    'Cinema': false,
-    'Leisure': false,
-    'Shopping': false,
-    'Groceries': false,
-    'Health': false,
-    'Entertainment': false,
-    'Education': false,
-    'Utilities': false,
-    'Rent': false,
-    'Savings': false,
-    'Gifts': false,
-    'Charity': false,
-    'Miscellaneous': false,
-  };
+  bool isNextButton = false;  // To toggle Save/Next button
 
   void showNumberInputError() {
     showDialog(
@@ -353,24 +401,21 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void saveExpenses() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('monthlyExpense', monthlyExpenseController.text);
-    await prefs.setString('dailyExpense', dailyExpenseController.text);
-
-    setState(() {
-      monthlyExpense = monthlyExpenseController.text;
-      dailyExpense = dailyExpenseController.text;
-      showInputs = true;
-      showNextButton = true;
-    });
+  void saveExpenses() {
+    if (monthlyExpenseController.text.isNotEmpty && dailyExpenseController.text.isNotEmpty) {
+      setState(() {
+        monthlyExpense = monthlyExpenseController.text;
+        dailyExpense = dailyExpenseController.text;
+        showInputs = true;
+        isNextButton = true;  // Change the button to Next after saving
+      });
+    }
   }
 
   void nextStep() {
     print('Monthly Expense: $monthlyExpense');
     print('Daily Expense: $dailyExpense');
-    print('Selected Categories: ${selectedCategories.entries.where((entry) => entry.value).map((e) => e.key).toList()}');
-    // You can navigate to another screen or perform actions here
+    // Perform any navigation or action here
   }
 
   @override
@@ -387,7 +432,6 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Display Monthly and Daily Expenses
             if (showInputs) ...[
               Text('Your Expense Details:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               SizedBox(height: 10),
@@ -395,53 +439,6 @@ class _HomePageState extends State<HomePage> {
               Text('Daily Expense: ₹$dailyExpense', style: TextStyle(fontSize: 18)),
               SizedBox(height: 20),
             ],
-
-            // Categories Section
-            Text('Categories', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
-            Wrap(
-              spacing: 12.0,
-              runSpacing: 12.0,
-              children: selectedCategories.keys.map((category) {
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedCategories[category] = !selectedCategories[category]!;
-                    });
-                  },
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                    decoration: BoxDecoration(
-                      color: selectedCategories[category]! ? Colors.yellow : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(50),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.3), spreadRadius: 2, blurRadius: 5),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(category, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                        if (selectedCategories[category]!)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8),
-                            child: Container(
-                              padding: EdgeInsets.all(5),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.red,
-                              ),
-                              child: Text('X', style: TextStyle(color: Colors.white)),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-
-            SizedBox(height: 30),
 
             // Monthly Expense Input
             Text('Estimated Monthly Expense', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -484,31 +481,18 @@ class _HomePageState extends State<HomePage> {
 
             SizedBox(height: 20),
 
-            // Save Button
+            // Save/Next Button
             Center(
               child: ElevatedButton(
-                onPressed: saveExpenses,
+                onPressed: isNextButton ? nextStep : saveExpenses,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.teal,
                   padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text('Save', style: TextStyle(fontSize: 18)),
+                child: Text(isNextButton ? 'Next' : 'Save', style: TextStyle(fontSize: 18)),
               ),
             ),
-
-            // Next Button
-            if (showNextButton)
-              Center(
-                child: ElevatedButton(
-                  onPressed: nextStep,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                  ),
-                  child: Text('Next', style: TextStyle(fontSize: 18)),
-                ),
-              ),
           ],
         ),
       ),
