@@ -10,19 +10,20 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const SplashScreen(),
+      home: const SplashPage(),
     );
   }
 }
 
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+// Splash Page
+class SplashPage extends StatefulWidget {
+  const SplashPage({Key? key}) : super(key: key);
 
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  _SplashPageState createState() => _SplashPageState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
@@ -34,17 +35,12 @@ class _SplashScreenState extends State<SplashScreen> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     bool isSignedUp = prefs.getBool('isSignedUp') ?? false;
 
-    if (isSignedUp) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SignInPage()),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SignUpPage()),
-      );
-    }
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => isSignedUp ? const SignInPage() : const SignUpPage(),
+      ),
+    );
   }
 
   @override
@@ -53,29 +49,24 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF013366), Color(0xFF0266CC)],
+            colors: [Color(0xFFFFFFFF), Color(0xFF00C6FF)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
         child: Center(
-          child: Container(
-            width: 250,
-            height: 250,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.grey[300],
-            ),
-            child: const Center(
-              child: Text(
-                "LOGO",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Add your logo image here
+              Image.asset(
+                'android/assets/images/logo.png', // Update with your logo path
+                width: 120,
+                height: 120,
               ),
-            ),
+              const SizedBox(height: 20),
+              const CircularProgressIndicator(color: Colors.blue),
+            ],
           ),
         ),
       ),
@@ -83,109 +74,81 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-class SignUpPage extends StatelessWidget {
-  const SignUpPage({Key? key}) : super(key: key);
+// Sign In Page
+class SignInPage extends StatelessWidget {
+  const SignInPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final _formKey = GlobalKey<FormState>();
-    final TextEditingController nameController = TextEditingController();
-    final TextEditingController emailController = TextEditingController();
-    final TextEditingController passwordController = TextEditingController();
-
-    Future<void> saveUserSignedUp() async {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isSignedUp', true);
-    }
-
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/clouds.jpg"),
-            fit: BoxFit.cover,
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFFFFFFF), Color(0xFF00C6FF)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
           ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
+          child: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Logo at the top
+                    Container(
+                      width: 100,
+                      height: 100,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      child: Image.asset(
+                        'android/assets/images/logo.png', // Update with your logo path
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                     const Text(
-                      "Sign Up",
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF87CEEB),
-                      ),
+                      "Sign In",
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.blue),
                     ),
                     const SizedBox(height: 20),
-                    TextFormField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: "Name",
-                        labelStyle: TextStyle(color: Color(0xFF87CEEB)),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
+                    _buildTextField(labelText: "Email", icon: Icons.email),
                     const SizedBox(height: 10),
-                    TextFormField(
-                      controller: emailController,
-                      decoration: const InputDecoration(
-                        labelText: "Email",
-                        labelStyle: TextStyle(color: Color(0xFF87CEEB)),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
+                    _buildTextField(labelText: "Password", icon: Icons.lock, obscureText: true),
                     const SizedBox(height: 10),
-                    TextFormField(
-                      controller: passwordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: "Password",
-                        labelStyle: TextStyle(color: Color(0xFF87CEEB)),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          saveUserSignedUp();
-                          Navigator.pushReplacement(
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
                             context,
-                            MaterialPageRoute(
-                                builder: (context) => const SignInPage()),
+                            MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
                           );
-                        }
+                        },
+                        child: const Text(
+                          "Forgot Password?",
+                          style: TextStyle(color: Colors.black26),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildElevatedButton(
+                      label: "Sign In",
+                      onPressed: () {
+                        // Sign-in logic
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF87CEEB),
-                      ),
-                      child: const Text(
-                        "Create Account",
-                        style: TextStyle(color: Colors.black),
-                      ),
                     ),
                     const SizedBox(height: 10),
                     GestureDetector(
                       onTap: () {
-                        Navigator.pushReplacement(
+                        Navigator.push(
                           context,
-                          MaterialPageRoute(
-                              builder: (context) => const SignInPage()),
+                          MaterialPageRoute(builder: (context) => const SignUpPage()),
                         );
                       },
                       child: const Text(
-                        "Already have an account? Sign In",
-                        style: TextStyle(
-                          color: Color(0xFF87CEEB),
-                          decoration: TextDecoration.underline,
-                        ),
+                        "Don't have an account? Sign Up",
+                        style: TextStyle(color: Colors.black26),
                       ),
                     ),
                   ],
@@ -199,89 +162,52 @@ class SignUpPage extends StatelessWidget {
   }
 }
 
-class SignInPage extends StatelessWidget {
-  const SignInPage({Key? key}) : super(key: key);
+// Sign Up Page
+class SignUpPage extends StatelessWidget {
+  const SignUpPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/clouds.jpg"),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    "Sign In",
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF87CEEB),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: "Email",
-                      labelStyle: TextStyle(color: Color(0xFF87CEEB)),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: "Password",
-                      labelStyle: TextStyle(color: Color(0xFF87CEEB)),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF87CEEB),
-                    ),
-                    child: const Text(
-                      "Sign In",
-                      style: TextStyle(color: Colors.black),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const ForgotPasswordPage()),
-                      );
-                    },
-                    child: const Text(
-                      "Forgot Password?",
-                      style: TextStyle(
-                        color: Color(0xFF87CEEB),
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        title: const Text("Sign Up"),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ListView(
+          children: [
+            const Text(
+              "Create Account",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
-          ),
+            const SizedBox(height: 20),
+            _buildTextField(labelText: "Name", icon: Icons.person),
+            const SizedBox(height: 10),
+            _buildTextField(labelText: "Email", icon: Icons.email),
+            const SizedBox(height: 10),
+            _buildTextField(labelText: "OTP", icon: Icons.numbers),
+            const SizedBox(height: 10),
+            _buildTextField(labelText: "Password", icon: Icons.lock, obscureText: true),
+            const SizedBox(height: 20),
+            _buildElevatedButton(
+              label: "Sign Up",
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SignInPage()),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
+// Forgot Password Page
 class ForgotPasswordPage extends StatelessWidget {
   const ForgotPasswordPage({Key? key}) : super(key: key);
 
@@ -289,15 +215,76 @@ class ForgotPasswordPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.black26,
         title: const Text("Forgot Password"),
-        backgroundColor: const Color(0xFF87CEEB),
       ),
-      body: const Center(
-        child: Text(
-          "Forgot Password Page",
-          style: TextStyle(fontSize: 24, color: Color(0xFF87CEEB)),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            _buildTextField(labelText: "Email", icon: Icons.email),
+            const SizedBox(height: 10),
+            _buildTextField(labelText: "OTP", icon: Icons.numbers),
+            const SizedBox(height: 10),
+            _buildTextField(labelText: "New Password", icon: Icons.lock, obscureText: true),
+            const SizedBox(height: 10),
+            _buildTextField(labelText: "Confirm Password", icon: Icons.lock, obscureText: true),
+            const SizedBox(height: 20),
+            _buildElevatedButton(
+              label: "Reset Password",
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SignInPage()),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+// Helper Widgets
+Widget _buildTextField({
+  required String labelText,
+  IconData? icon,
+  bool obscureText = false,
+}) {
+  return TextField(
+    obscureText: obscureText,
+    style: const TextStyle(color: Colors.white),
+    decoration: InputDecoration(
+      prefixIcon: Icon(icon, color: Colors.white),
+      labelText: labelText,
+      labelStyle: const TextStyle(color: Colors.white),
+      enabledBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: Colors.white),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: Colors.white, width: 2),
+      ),
+    ),
+  );
+}
+
+Widget _buildElevatedButton({
+  required String label,
+  required VoidCallback onPressed,
+}) {
+  return ElevatedButton(
+    onPressed: onPressed,
+    style: ElevatedButton.styleFrom(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 32),
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(25),
+      ),
+    ),
+    child: Text(
+      label,
+      style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+    ),
+  );
 }
