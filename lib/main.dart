@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:profenx/Analytic.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -40,7 +41,7 @@ class _SplashPageState extends State<SplashPage> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => isSignedUp ? SignInPage() : SignUpPage(),
+        builder: (context) => isSignedUp ? AnalyticsPage() : SignUpPage(),
       ),
     );
   }
@@ -178,6 +179,7 @@ class SignInPage extends StatelessWidget {
 
     if (response.statusCode == 200) {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isSignedUp', true);
       await prefs.setString('username', email);
       await prefs.setString('backend_url', 'https://profenx-backend.onrender.com/api');
       print("sign-up passed");
@@ -426,14 +428,18 @@ class _HomePageState extends State<HomePage> {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'username': email,
-        'dailyExpense':dailyExpense,
-        'monthlyExpense':monthlyExpense
+        'dailyExpense': dailyExpense,
+        'monthlyExpense': monthlyExpense
       }),
     );
 
     if (response.statusCode == 200) {
       print('Expected added successfully');
-      // Perform any navigation or action here
+      // Navigate to the Analytics page
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => AnalyticsPage()), // Ensure you have an Analytics widget
+      );
     } else {
       // Handle error
       print(response);
@@ -454,6 +460,7 @@ class _HomePageState extends State<HomePage> {
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
