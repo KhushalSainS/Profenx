@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() => runApp(const MyApp());
 
@@ -38,7 +40,7 @@ class _SplashPageState extends State<SplashPage> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => isSignedUp ? const SignInPage() : const SignUpPage(),
+        builder: (context) => isSignedUp ? SignInPage() : SignUpPage(),
       ),
     );
   }
@@ -76,7 +78,10 @@ class _SplashPageState extends State<SplashPage> {
 
 // Sign In Page
 class SignInPage extends StatelessWidget {
-  const SignInPage({Key? key}) : super(key: key);
+  SignInPage({Key? key}) : super(key: key);
+
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -112,9 +117,9 @@ class SignInPage extends StatelessWidget {
                       style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.blue),
                     ),
                     const SizedBox(height: 20),
-                    _buildTextField(labelText: "Email", icon: Icons.email),
+                    _buildTextField(labelText: "Email", icon: Icons.email, controller: _emailController),
                     const SizedBox(height: 10),
-                    _buildTextField(labelText: "Password", icon: Icons.lock, obscureText: true),
+                    _buildTextField(labelText: "Password", icon: Icons.lock, obscureText: true, controller: _passwordController),
                     const SizedBox(height: 10),
                     Align(
                       alignment: Alignment.centerRight,
@@ -122,7 +127,7 @@ class SignInPage extends StatelessWidget {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+                            MaterialPageRoute(builder: (context) => ForgotPasswordPage()),
                           );
                         },
                         child: const Text(
@@ -135,11 +140,9 @@ class SignInPage extends StatelessWidget {
                     _buildElevatedButton(
                       label: "Sign In",
                       onPressed: () {
-                        // Sign-in logic
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (context) => HomePage()),
-                        );
+                        final email = _emailController.text;
+                        final password = _passwordController.text;
+                        _signIn(context, email, password);
                       },
                     ),
                     const SizedBox(height: 10),
@@ -147,7 +150,7 @@ class SignInPage extends StatelessWidget {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const SignUpPage()),
+                          MaterialPageRoute(builder: (context) => SignUpPage()),
                         );
                       },
                       child: const Text(
@@ -164,11 +167,54 @@ class SignInPage extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _signIn(BuildContext context, String email, String password) async {
+    final url = Uri.parse('https://profenx-backend.onrender.com/api/users/signup');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'username': email, 'password': password}),
+    );
+
+    if (response.statusCode == 200) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('username', email);
+      await prefs.setString('backend_url', 'https://profenx-backend.onrender.com/api');
+      print("sign-up passed");
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+      );
+    } else {
+      // Handle error
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Sign-in Failed'),
+          content: Text('Invalid username or password. Please try again.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
 }
 
 // Sign Up Page
 class SignUpPage extends StatelessWidget {
-  const SignUpPage({Key? key}) : super(key: key);
+  SignUpPage({Key? key}) : super(key: key);
+
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _otpController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -187,13 +233,13 @@ class SignUpPage extends StatelessWidget {
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            _buildTextField(labelText: "Name", icon: Icons.person),
+            _buildTextField(labelText: "Name", icon: Icons.person, controller: _nameController),
             const SizedBox(height: 10),
-            _buildTextField(labelText: "Email", icon: Icons.email),
+            _buildTextField(labelText: "Email", icon: Icons.email, controller: _emailController),
             const SizedBox(height: 10),
-            _buildTextField(labelText: "OTP", icon: Icons.numbers),
+            _buildTextField(labelText: "OTP", icon: Icons.numbers, controller: _otpController),
             const SizedBox(height: 10),
-            _buildTextField(labelText: "Password", icon: Icons.lock, obscureText: true),
+            _buildTextField(labelText: "Password", icon: Icons.lock, obscureText: true, controller: _passwordController),
             const SizedBox(height: 20),
             _buildElevatedButton(
               label: "Sign Up",
@@ -202,7 +248,7 @@ class SignUpPage extends StatelessWidget {
                 await prefs.setBool('isSignedUp', true);
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => const SignInPage()),
+                  MaterialPageRoute(builder: (context) => SignInPage()),
                 );
               },
             ),
@@ -215,7 +261,12 @@ class SignUpPage extends StatelessWidget {
 
 // Forgot Password Page
 class ForgotPasswordPage extends StatelessWidget {
-  const ForgotPasswordPage({Key? key}) : super(key: key);
+  ForgotPasswordPage({Key? key}) : super(key: key);
+
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _otpController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -228,20 +279,20 @@ class ForgotPasswordPage extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            _buildTextField(labelText: "Email", icon: Icons.email),
+            _buildTextField(labelText: "Email", icon: Icons.email, controller: _emailController),
             const SizedBox(height: 10),
-            _buildTextField(labelText: "OTP", icon: Icons.numbers),
+            _buildTextField(labelText: "OTP", icon: Icons.numbers, controller: _otpController),
             const SizedBox(height: 10),
-            _buildTextField(labelText: "New Password", icon: Icons.lock, obscureText: true),
+            _buildTextField(labelText: "New Password", icon: Icons.lock, obscureText: true, controller: _newPasswordController),
             const SizedBox(height: 10),
-            _buildTextField(labelText: "Confirm Password", icon: Icons.lock, obscureText: true),
+            _buildTextField(labelText: "Confirm Password", icon: Icons.lock, obscureText: true, controller: _confirmPasswordController),
             const SizedBox(height: 20),
             _buildElevatedButton(
               label: "Reset Password",
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => const SignInPage()),
+                  MaterialPageRoute(builder: (context) => SignInPage()),
                 );
               },
             ),
@@ -302,7 +353,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void saveExpenses() {
+  void saveExpenses() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('monthlyExpense', monthlyExpenseController.text);
+    await prefs.setString('dailyExpense', dailyExpenseController.text);
+
     setState(() {
       monthlyExpense = monthlyExpenseController.text;
       dailyExpense = dailyExpenseController.text;
@@ -466,8 +521,10 @@ Widget _buildTextField({
   required String labelText,
   IconData? icon,
   bool obscureText = false,
+  TextEditingController? controller,
 }) {
   return TextField(
+    controller: controller,
     obscureText: obscureText,
     style: const TextStyle(color: Colors.white),
     decoration: InputDecoration(
