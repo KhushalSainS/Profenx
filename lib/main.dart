@@ -401,21 +401,58 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void saveExpenses() {
-    if (monthlyExpenseController.text.isNotEmpty && dailyExpenseController.text.isNotEmpty) {
-      setState(() {
-        monthlyExpense = monthlyExpenseController.text;
-        dailyExpense = dailyExpenseController.text;
-        showInputs = true;
-        isNextButton = true;  // Change the button to Next after saving
-      });
-    }
+  void saveExpenses() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('monthlyExpense', monthlyExpenseController.text);
+    await prefs.setString('dailyExpense', dailyExpenseController.text);
+
+    setState(() {
+      monthlyExpense = monthlyExpenseController.text;
+      dailyExpense = dailyExpenseController.text;
+      showInputs = true;
+      isNextButton = true;  // Change the button to Next after saving
+    });
   }
 
-  void nextStep() {
-    print('Monthly Expense: $monthlyExpense');
-    print('Daily Expense: $dailyExpense');
-    // Perform any navigation or action here
+  Future<void> nextStep() async {
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString('username') ?? '';
+    final monthlyExpense = prefs.getString('monthlyExpense') ?? '';
+    final dailyExpense = prefs.getString('dailyExpense') ?? '';
+
+    final url = Uri.parse('https://profenx-backend.onrender.com/api/users/addExpected');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'username': email,
+        'dailyExpense':dailyExpense,
+        'monthlyExpense':monthlyExpense
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('Expected added successfully');
+      // Perform any navigation or action here
+    } else {
+      // Handle error
+      print(response);
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Failed to add expected'),
+          content: Text('Please try again.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
