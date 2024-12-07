@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'expense_form.dart'; // Assuming you have a separate file for the ExpenseForm widget
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 void main() => runApp(const AnalyticsPageApp());
 
 class AnalyticsPageApp extends StatelessWidget {
@@ -167,6 +166,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   @override
   void initState() {
     super.initState();
+    selectedYear = DateFormat('yyyy').format(DateTime.now());
     _fetchExpenses();
   }
 
@@ -189,6 +189,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonData = json.decode(response.body); // Decode as a Map
         final List<dynamic> data = jsonData['expenses']; // Access the 'expenses' list
+
+        // Store expenses in SharedPreferences
+        await prefs.setString('expenses', json.encode(data));
 
         setState(() {
           expensesByMonth = {
@@ -275,7 +278,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 ],
               ),
               const SizedBox(height: 10),
-              const SmallYearDropdown(),
+              SmallYearDropdown(onYearChanged: (year) {
+                setState(() {
+                  selectedYear = year;
+                  _fetchExpenses();
+                });
+              }),
               RotatingCharts(),
               const SizedBox(height: 20),
               ...months.map((month) {
@@ -323,7 +331,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                             return ListTile(
                               title: Text(expense['title']),
                               subtitle: Text(
-                                  'Amount: \$${expense['amount']} - ${expense['date']}'),
+                                  'Amount: \$${expense['Amount']} - ${expense['Date']} - Category: ${expense['category']}'),
                             );
                           }).toList()
                               : [
@@ -352,7 +360,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 }
 
 class SmallYearDropdown extends StatefulWidget {
-  const SmallYearDropdown({Key? key}) : super(key: key);
+  final Function(String) onYearChanged;
+
+  const SmallYearDropdown({Key? key, required this.onYearChanged}) : super(key: key);
 
   @override
   _SmallYearDropdownState createState() => _SmallYearDropdownState();
@@ -386,7 +396,7 @@ class _SmallYearDropdownState extends State<SmallYearDropdown> {
         onChanged: (value) {
           setState(() {
             selectedYear = value; // Update the selected year when changed
-            // You can also call a function here to fetch expenses based on the new year
+            widget.onYearChanged(value!); // Notify parent widget about the change
           });
         },
       ),
